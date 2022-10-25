@@ -32,20 +32,28 @@ retries = Retry (
     status_forcelist=[408,429, 500, 502, 503, 504],
     backoff_factor=1)
 adapter = HTTPAdapter(max_retries=retries)
+counter = 0
 
 
 # method
 def arsipkan(object):
+    """
+    AmplopType: disposisi -> patch
+    AmplopType: NdMasuk -> post
+    """
+
     id = str(object['Id'])
     nd_id = object['NdId']
     perihal = object['Perihal']
+    amplop_type = object['AmplopType']
 
     req = requests.Session()
     req.mount('https://', adapter)
     reqUrl = f"https://office.kemenkeu.go.id/api/Disposisi/UpdateStatus/{nd_id}/2"
+    reqUrl2 = f"https://office.kemenkeu.go.id/api/NdKeluars/ArsipND/{nd_id}/{id}"
 
     headersList = {
-        "Accept": "*/*",
+        "Accept": "application/json, text/plain, */*",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36",
         "Content-Type": "application/json",
         "cookie": kukis,
@@ -56,24 +64,28 @@ def arsipkan(object):
             "-",
             []
         ])
-
+    payload2 = json.dumps({
+        "alasan": "-",
+        "listTags": []
+        })
+    
     try:
-        # response = requests.request("PATCH", reqUrl, data=payload,  headers=headersList, timeout=30).json()
-        response = req.patch(reqUrl, headers=headersList, data=payload, timeout=30).json()
-        status = ''
-        if response['UpdateStatusResult'][0]['Status'] == 2:
-            status = 'Berhasil'
-        else:
-            status = 'Gagal'
-    except:
-        status = 'Gagal'
-    result = f'Id: {id}, Hal: {perihal}, Status: {status}'
-    print(result)
+        if amplop_type == 'disposisi':
+            result = req.patch(reqUrl, headers=headersList, data=payload, timeout=30).json()
+            print(result['Id'], result['Perihal'])
+        elif amplop_type == 'NdMasuk':
+            result = requests.request("POST", reqUrl2, data=payload2,  headers=headersList, timeout=30).json()
+            print(result['Id'], result['Perihal'])
+
+
+    except Exception:
+        print(Exception)
+
 
 def ambil_data(tanggal_awal, tanggal_akhir):
     req = requests.Session()
     req.mount('https://', adapter)
-    reqUrl = f"https://office.kemenkeu.go.id/api/AmplopNd?search&filter&urgensi=All&reset=false&tagnd=All&UnitFilter&StartDateFilter={tanggal_awal}&EndDateFilter={tanggal_akhir}" #&limit={limit}&offset={offset}
+    reqUrl = f"https://office.kemenkeu.go.id/api/AmplopNd?search&filter&urgensi=All&reset=false&tagnd=All&UnitFilter&StartDateFilter={tanggal_awal}&EndDateFilter={tanggal_akhir}&limit=15&offset=0"
     headersList = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
@@ -85,17 +97,18 @@ def ambil_data(tanggal_awal, tanggal_akhir):
     return response
 
 def mulai_ambil():
-    response = ambil_data(tanggal_awal, tanggal_akhir)
-    while response['totalItems'] != 0:
-        print('Total data :' + str(response['totalItems']))
+    counter = ambil_data(tanggal_awal, tanggal_akhir)['totalItems']
+    while counter != 0:
+        response = []
+        response = ambil_data(tanggal_awal, tanggal_akhir)
+        counter = response['totalItems']
+        print('Total data :' + str(counter))
         with futures.ThreadPoolExecutor() as thread:
             for object in response['listData']:
-                try:
-                    thread.submit(arsipkan(object))
-                except:
-                    print('Terjadi error, lanjut gan')
-                    continue
-        response = ambil_data(tanggal_awal, tanggal_akhir)
+                thread.submit(arsipkan(object))     
+        # for object in response['listData']:
+        #     arsipkan(object)
+
 
 
 # start
@@ -116,8 +129,7 @@ code.send_keys(token)
 wait.until(EC.visibility_of_element_located((By.NAME, 'button')))
 code.send_keys(Keys.ENTER)
 wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="fuse-shortcuts"]/div[2]/div/span')))
-driver.get('https://office.kemenkeu.go.id/nadine/mejaku')
-kukis = driver.wait_for_request('/api/AmplopNd').headers['cookie']
+kukis = driver.wait_for_request('https://office.kemenkeu.go.id/Index/UserInfo').headers['cookie']
 if kukis != None:
     print('Cookie berhasil didapat, lanjut request')
 driver.close()
