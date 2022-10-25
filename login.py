@@ -74,7 +74,7 @@ def arsipkan(object):
             result = req.patch(reqUrl, headers=headersList, data=payload, timeout=30).json()
             print(result['Id'], result['Perihal'])
         elif amplop_type == 'NdMasuk':
-            result = requests.request("POST", reqUrl2, data=payload2,  headers=headersList, timeout=30).json()
+            result = req.post(reqUrl2, data=payload2,  headers=headersList, timeout=30).json()
             print(result['Id'], result['Perihal'])
 
     except Exception:
