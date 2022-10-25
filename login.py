@@ -26,7 +26,7 @@ totp = pyotp.TOTP(config.mfa_token)
 kukis = ''
 # format : DD-MM-YYYY, kosongkan jika tidak mau filter
 tanggal_awal = ''
-tanggal_akhir = '30-09-2022'
+tanggal_akhir = ''
 retries = Retry (
     total=5,
     status_forcelist=[408,429, 500, 502, 503, 504],
@@ -38,8 +38,8 @@ counter = 0
 # method
 def arsipkan(object):
     """
-    AmplopType: disposisi -> patch
-    AmplopType: NdMasuk -> post
+    AmplopType: disposisi (_JenisNd = 2) -> patch
+    AmplopType: NdMasuk (_JenisNd = 1) -> post
     """
 
     id = str(object['Id'])
@@ -77,7 +77,6 @@ def arsipkan(object):
             result = requests.request("POST", reqUrl2, data=payload2,  headers=headersList, timeout=30).json()
             print(result['Id'], result['Perihal'])
 
-
     except Exception:
         print(Exception)
 
@@ -106,10 +105,6 @@ def mulai_ambil():
         with futures.ThreadPoolExecutor() as thread:
             for object in response['listData']:
                 thread.submit(arsipkan(object))     
-        # for object in response['listData']:
-        #     arsipkan(object)
-
-
 
 # start
 driver.get('https://office.kemenkeu.go.id/index/index')
