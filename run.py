@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+import sys
 import config
 import pyotp
 import requests
@@ -72,13 +73,15 @@ def arsipkan(object):
     try:
         if amplop_type == 'disposisi':
             result = req.patch(reqUrl, headers=headersList, data=payload, timeout=30).json()
-            print(result['Id'], result['Perihal'])
+            print(id, result["Perihal"])
+            # print(result)
         elif amplop_type == 'NdMasuk':
             result = req.post(reqUrl2, data=payload2,  headers=headersList, timeout=30).json()
-            print(result['Id'], result['Perihal'])
+            print(id, result["Perihal"])
+            # print(result)
 
-    except Exception:
-        print(Exception)
+    except Exception as e:
+        print(sys.exc_value)
 
 
 def ambil_data(tanggal_awal, tanggal_akhir):
@@ -97,6 +100,8 @@ def ambil_data(tanggal_awal, tanggal_akhir):
 
 def mulai_ambil():
     counter = ambil_data(tanggal_awal, tanggal_akhir)['totalItems']
+    if counter == 0:
+        print("Data habis, tidak ada yang diproses")
     while counter != 0:
         response = []
         response = ambil_data(tanggal_awal, tanggal_akhir)
